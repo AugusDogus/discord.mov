@@ -53,6 +53,6 @@ The patch currently covers:
 
 - Voice endpoints that include a non-standard port (Discord sometimes returns `host:port`; the upstream library stripped the port).
 
-## Notes
+---
 
-`debug` is intentionally included as a direct dependency. A transitive dependency (`werift-rtp`, pulled in by `discord.js-selfbot-v13`) imports `debug` at runtime but does not declare it in its `dependencies`, which can cause Bun to fail with an error like: `Cannot find package 'debug' from ...werift-rtp.../log.js`.
+<sub> `debug` is intentionally included as a direct dependency. `werift-rtp` (used for RTP packet parsing) imports `debug` at runtime but does not declare it in its own `dependencies`, which causes Bun to fail with `Cannot find package 'debug'`.</sub>

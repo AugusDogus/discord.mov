@@ -16,8 +16,8 @@
   "dependencies": {
     "debug": "^4.4.3",
     "discord.js-selfbot-v13": "^3.7.1",
-    "pick-port": "^2.2.0",
     "sodium-plus": "^0.9.0",
+    "werift-rtp": "^0.8.8",
     "ws": "^8.19.0"
   },
   "devDependencies": {

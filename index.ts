@@ -96,9 +96,8 @@ client.on("messageCreate", async (message: Message) => {
   }
 
   const channel = voiceState.channel;
-  const channelName = "name" in channel ? channel.name : "voice";
   await message.reply(
-    `Joining **${channelName}**. ${voiceState.streaming ? "Connecting to your stream..." : "Start a Go Live and I'll record it."}`,
+    voiceState.streaming ? "Recording your stream." : "Start streaming and I'll record it.",
   );
 
   try {

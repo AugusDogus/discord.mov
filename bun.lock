@@ -7,8 +7,8 @@
       "dependencies": {
         "debug": "^4.4.3",
         "discord.js-selfbot-v13": "^3.7.1",
-        "pick-port": "^2.2.0",
         "sodium-plus": "^0.9.0",
+        "werift-rtp": "^0.8.8",
         "ws": "^8.19.0",
       },
       "devDependencies": {
@@ -278,8 +278,6 @@
     "p-try": ["p-try@2.2.0", "", {}, "sha512-R4nPAVTAU0B9D35/Gk3uJf/7XYbQcyohSKdvAxIRSNghFl4e71hVoGnBNQz9cWaXxO2I10KTC+3jMdvvoKw6dQ=="],
 
     "path-exists": ["path-exists@4.0.0", "", {}, "sha512-ak9Qy5Q7jYb2Wwcey5Fpvg2KoAc/ZIhLSLOSBmRmygPsGwkVVt0fZa0qrtMz+m6tJTAHfZQ8FnmB4MG4LWy7/w=="],
-
-    "pick-port": ["pick-port@2.2.0", "", { "dependencies": { "debug": "^4.4.3" } }, "sha512-JZ6DiLCsmwHHTiazOn1gJf7HPQSLAQDNWnMvHZp0IKJxk9JIj7Fsht4q6Ei5DfKblRUKMd4/65oBTxyq0O7YYQ=="],
 
     "pngjs": ["pngjs@5.0.0", "", {}, "sha512-40QW5YalBNfQo5yRYmiw7Yz6TKKVr3h6970B2YE+3fQpsWcrbj1PzJgxeJ19DRQjhMbKPIuMY8rFaXc8moolVw=="],
 
