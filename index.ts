@@ -1,29 +1,25 @@
+import { Client, type Message, type VoiceState } from "discord.js-selfbot-v13";
+import { mkdirSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 import {
-    Client,
-    type Message,
-    type VoiceState,
-} from 'discord.js-selfbot-v13';
-import { mkdirSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
-import { log, logError } from './src/log';
-import {
-    type StreamReceiverHandle,
-    type StreamTransportInfo,
-    startStreamReceiver,
-} from './src/stream-receiver';
+  type StreamReceiverHandle,
+  type StreamTransportInfo,
+  startStreamReceiver,
+} from "./src/stream-receiver";
 
-const __dirname = typeof import.meta.dir === 'string'
-  ? import.meta.dir
-  : dirname(fileURLToPath(import.meta.url));
+const __dirname =
+  typeof import.meta.dir === "string" ? import.meta.dir : dirname(fileURLToPath(import.meta.url));
 
-const RECORDINGS_DIR = join(__dirname, 'recordings');
+const RECORDINGS_DIR = join(__dirname, "recordings");
 mkdirSync(RECORDINGS_DIR, { recursive: true });
 
 const client = new Client();
 
 function sendGateway(op: number, d: Record<string, unknown>) {
-  (client as unknown as { ws: { broadcast: (data: Record<string, unknown>) => void } }).ws.broadcast({ op, d });
+  (
+    client as unknown as { ws: { broadcast: (data: Record<string, unknown>) => void } }
+  ).ws.broadcast({ op, d });
 }
 
 interface ActiveRecording {
@@ -62,23 +58,23 @@ interface PendingStreamAuth {
 
 const pendingStreamAuths = new Map<string, PendingStreamAuth>();
 
-client.on('ready', () => {
-  log(`${client.user?.username} is ready!`);
+client.on("ready", () => {
+  console.log(`${client.user?.username} is ready!`);
 });
 
-client.on('messageCreate', async (message: Message) => {
+client.on("messageCreate", async (message: Message) => {
   if (!message.guild || !client.user) return;
   if (!message.mentions.has(client.user.id)) return;
 
   const content = message.content.toLowerCase();
 
-  if (content.includes('stop')) {
+  if (content.includes("stop")) {
     const recording = activeRecordings.get(message.author.id);
     if (recording) {
       await stopRecording(message.author.id, `stop requested by ${message.author.tag}`);
-      await message.reply('Stopped recording.');
+      await message.reply("Stopped recording.");
     } else {
-      await message.reply('No active recording for you.');
+      await message.reply("No active recording for you.");
     }
     return;
   }
@@ -100,14 +96,18 @@ client.on('messageCreate', async (message: Message) => {
   }
 
   const channel = voiceState.channel;
-  const channelName = 'name' in channel ? channel.name : 'voice';
-  await message.reply(`Joining **${channelName}**. ${voiceState.streaming ? 'Connecting to your stream...' : 'Start a Go Live and I\'ll record it.'}`);
+  const channelName = "name" in channel ? channel.name : "voice";
+  await message.reply(
+    `Joining **${channelName}**. ${voiceState.streaming ? "Connecting to your stream..." : "Start a Go Live and I'll record it."}`,
+  );
 
   try {
     await initiateRecording(message.guild.id, channel.id, message.author.id, voiceState.streaming);
   } catch (err) {
-    logError('Failed to start recording:', err);
-    await message.reply(`Something went wrong: ${err instanceof Error ? err.message : String(err)}`);
+    console.error("Failed to start recording:", err);
+    await message.reply(
+      `Something went wrong: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 });
 
@@ -125,7 +125,7 @@ async function initiateRecording(
   const sessionId = await new Promise<string>((resolve, reject) => {
     const timeout = setTimeout(() => {
       pendingVoiceSessions.delete(guildId);
-      reject(new Error('Timed out waiting for voice session'));
+      reject(new Error("Timed out waiting for voice session"));
     }, 15000);
 
     pendingVoiceSessions.set(guildId, {
@@ -145,7 +145,6 @@ async function initiateRecording(
       },
     });
 
-    log(`Joining voice channel ${channelId} via raw VOICE_STATE_UPDATE`);
     sendGateway(4, {
       guild_id: guildId,
       channel_id: channelId,
@@ -155,13 +154,10 @@ async function initiateRecording(
     });
   });
 
-  log(`Voice session established: sessionId=${sessionId}`);
-
   if (isAlreadyStreaming) {
     await connectToStream(guildId, channelId, targetUserId, selfUserId, sessionId);
   } else {
     pendingStreams.set(targetUserId, { guildId, channelId });
-    log(`Waiting for ${targetUserId} to start streaming`);
   }
 }
 
@@ -177,14 +173,13 @@ async function connectToStream(
   sessionId: string,
 ) {
   pendingStreams.delete(targetUserId);
-  log(`Connecting to stream of ${targetUserId}...`);
 
   const streamKey = buildStreamKey(guildId, channelId, targetUserId);
 
   const transportPromise = new Promise<StreamTransportInfo>((resolve, reject) => {
     const timeout = setTimeout(() => {
       pendingStreamAuths.delete(streamKey);
-      reject(new Error('Timed out waiting for stream auth info'));
+      reject(new Error("Timed out waiting for stream auth info"));
     }, 15000);
 
     pendingStreamAuths.set(streamKey, {
@@ -206,32 +201,24 @@ async function connectToStream(
     });
   });
 
-  log(`Sending STREAM_WATCH for ${streamKey}`);
   sendGateway(20, { stream_key: streamKey });
 
   let transport: StreamTransportInfo;
   try {
     transport = await transportPromise;
   } catch (err) {
-    logError('Failed to get stream transport info:', err);
+    console.error("Failed to get stream transport info:", err);
     return;
   }
 
   const user = await client.users.fetch(targetUserId);
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const filename = `${user.username}_${timestamp}.mkv`;
   const outputPath = join(RECORDINGS_DIR, filename);
 
-  log(`Recording to ${outputPath}`);
+  const recorder = await startStreamReceiver(outputPath, filename, selfUserId, transport);
 
-  const recorder = await startStreamReceiver(
-    outputPath,
-    filename,
-    selfUserId,
-    transport,
-  );
-
-  log(`Recording started: ${filename}`);
+  console.log(`Recording started: ${outputPath}`);
 
   activeRecordings.set(targetUserId, {
     recorder,
@@ -242,11 +229,11 @@ async function connectToStream(
 }
 
 // Intercept all relevant Gateway events
-client.on('raw', (packet: { t?: string; d?: Record<string, unknown> }) => {
+client.on("raw", (packet: { t?: string; d?: Record<string, unknown> }) => {
   if (!packet.t || !packet.d) return;
 
   switch (packet.t) {
-    case 'VOICE_STATE_UPDATE': {
+    case "VOICE_STATE_UPDATE": {
       const d = packet.d;
       const userId = d.user_id as string;
       if (userId !== client.user?.id) return;
@@ -255,43 +242,39 @@ client.on('raw', (packet: { t?: string; d?: Record<string, unknown> }) => {
       const sessionId = d.session_id as string;
       const pending = pendingVoiceSessions.get(guildId);
       if (pending && sessionId) {
-        log(`[gateway] VOICE_STATE_UPDATE: sessionId=${sessionId}`);
         pending.resolve(sessionId);
       }
       break;
     }
 
-    case 'STREAM_CREATE': {
+    case "STREAM_CREATE": {
       const streamKey = packet.d.stream_key as string;
       if (!streamKey) return;
       const pending = pendingStreamAuths.get(streamKey);
       if (!pending) return;
 
-      log(`[gateway] STREAM_CREATE: rtc_server_id=${packet.d.rtc_server_id}`);
       pending.serverId = packet.d.rtc_server_id as string;
       tryResolveStreamAuth(pending);
       break;
     }
 
-    case 'STREAM_SERVER_UPDATE': {
+    case "STREAM_SERVER_UPDATE": {
       const streamKey = packet.d.stream_key as string;
       if (!streamKey) return;
       const pending = pendingStreamAuths.get(streamKey);
       if (!pending) return;
 
-      log(`[gateway] STREAM_SERVER_UPDATE: endpoint=${packet.d.endpoint}`);
       pending.token = packet.d.token as string;
       pending.endpoint = packet.d.endpoint as string;
       tryResolveStreamAuth(pending);
       break;
     }
 
-    case 'STREAM_DELETE': {
+    case "STREAM_DELETE": {
       const streamKey = packet.d.stream_key as string;
       if (!streamKey) return;
       const pending = pendingStreamAuths.get(streamKey);
       if (pending) {
-        log(`[gateway] STREAM_DELETE: reason=${packet.d.reason}`);
         pending.reject(new Error(`Stream deleted: ${packet.d.reason}`));
       }
       break;
@@ -301,7 +284,6 @@ client.on('raw', (packet: { t?: string; d?: Record<string, unknown> }) => {
 
 function tryResolveStreamAuth(pending: PendingStreamAuth) {
   if (pending.serverId && pending.token && pending.endpoint && pending.sessionId) {
-    log(`Stream auth resolved: endpoint=${pending.endpoint}`);
     pending.resolve({
       serverId: pending.serverId,
       token: pending.token,
@@ -316,11 +298,13 @@ async function stopRecording(userId: string, reason: string) {
   const recording = activeRecordings.get(userId);
   if (!recording) return;
 
-  log(`Stopping recording for ${userId}: ${reason}`);
+  console.log(`Stopping recording for ${userId}: ${reason}`);
   activeRecordings.delete(userId);
 
   // Leave the stream
-  try { sendGateway(19, { stream_key: recording.streamKey }); } catch {}
+  try {
+    sendGateway(19, { stream_key: recording.streamKey });
+  } catch {}
 
   await recording.recorder.stop();
 
@@ -336,7 +320,7 @@ async function stopRecording(userId: string, reason: string) {
   } catch {}
 }
 
-client.on('voiceStateUpdate', async (_oldState: VoiceState, newState: VoiceState) => {
+client.on("voiceStateUpdate", async (_oldState: VoiceState, newState: VoiceState) => {
   const userId = newState.id;
 
   const pending = pendingStreams.get(userId);
@@ -344,20 +328,27 @@ client.on('voiceStateUpdate', async (_oldState: VoiceState, newState: VoiceState
     const selfUserId = client.user!.id;
     // We need the session_id — look it up from our own voice state
     const selfVoiceState = newState.guild?.voiceStates.cache.get(selfUserId);
-    const sessionId = (selfVoiceState as unknown as { sessionID?: string })?.sessionID
-      ?? (selfVoiceState as unknown as { sessionId?: string })?.sessionId
-      ?? (selfVoiceState as unknown as { session_id?: string })?.session_id;
+    const sessionId =
+      (selfVoiceState as unknown as { sessionID?: string })?.sessionID ??
+      (selfVoiceState as unknown as { sessionId?: string })?.sessionId ??
+      (selfVoiceState as unknown as { session_id?: string })?.session_id;
 
     if (!sessionId) {
-      logError('Cannot find our session_id for pending stream connection');
+      console.error("Cannot find our session_id for pending stream connection");
       pendingStreams.delete(userId);
       return;
     }
 
     try {
-      await connectToStream(pending.guildId, pending.channelId, userId, selfUserId, String(sessionId));
+      await connectToStream(
+        pending.guildId,
+        pending.channelId,
+        userId,
+        selfUserId,
+        String(sessionId),
+      );
     } catch (err) {
-      logError(`Failed to connect to stream for ${userId}:`, err);
+      console.error(`Failed to connect to stream for ${userId}:`, err);
       pendingStreams.delete(userId);
     }
     return;
@@ -368,12 +359,14 @@ client.on('voiceStateUpdate', async (_oldState: VoiceState, newState: VoiceState
     const stoppedStreaming = !newState.streaming;
 
     if (leftChannel || stoppedStreaming) {
-      await stopRecording(userId, leftChannel ? 'user left voice channel' : 'user stopped streaming');
+      await stopRecording(
+        userId,
+        leftChannel ? "user left voice channel" : "user stopped streaming",
+      );
     }
   }
 
   if (pending && !newState.channelId) {
-    log(`${userId} left the channel before streaming, cleaning up.`);
     pendingStreams.delete(userId);
     sendGateway(4, {
       guild_id: pending.guildId,

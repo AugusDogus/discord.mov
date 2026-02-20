@@ -23,7 +23,7 @@ Recordings are written to `recordings/` next to `index.ts`.
 
 - Bun (this repo targets Bun; Node.js is untested)
 - FFmpeg installed and available on `PATH` (running `ffmpeg -version` should work)
-- A Discord *user* token in `.env` as `DISCORD_TOKEN`
+- A Discord _user_ token in `.env` as `DISCORD_TOKEN`
 
 ## Setup
 
