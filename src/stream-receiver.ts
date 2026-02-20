@@ -373,8 +373,6 @@ export async function startStreamReceiver(
     const sdp = buildSdp(videoUdpPort, audioUdpPort, codec);
 
     ffmpeg = spawn("ffmpeg", [
-      "-loglevel",
-      "info",
       "-reorder_queue_size",
       "500",
       "-max_delay",
@@ -383,8 +381,6 @@ export async function startStreamReceiver(
       "ignore_err",
       "-fflags",
       "+genpts+discardcorrupt",
-      "-use_wallclock_as_timestamps",
-      "1",
       "-f",
       "sdp",
       "-analyzeduration",
