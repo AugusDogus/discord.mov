@@ -1,0 +1,81 @@
+diff --git a/node_modules/discord.js-selfbot-v13/.bun-tag-ebd62b9f36e13c03 b/.bun-tag-ebd62b9f36e13c03
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/src/client/voice/VoiceConnection.js b/src/client/voice/VoiceConnection.js
+index f24438d4ea1a15e6cf28de8bbe845d9e9465155f..40288cbcee84e040b3136f11e244ba99fac57a6d 100644
+--- a/src/client/voice/VoiceConnection.js
++++ b/src/client/voice/VoiceConnection.js
+@@ -337,7 +337,7 @@ class VoiceConnection extends EventEmitter {
+       return;
+     }
+ 
+-    endpoint = endpoint.match(/([^:]*)/)[0];
++    endpoint = endpoint.replace(/^wss?:\/\//, '');
+     this.emit('debug', `Endpoint resolved as ${endpoint}`);
+ 
+     if (!endpoint) {
+@@ -601,30 +601,23 @@ class VoiceConnection extends EventEmitter {
+     });
+   }
+ 
+-  onStartStreaming({ video_ssrc, user_id, audio_ssrc }) {
++  onStartStreaming({ video_ssrc, user_id, audio_ssrc, streams }) {
+     this.ssrcMap.set(+audio_ssrc, {
+       ...(this.ssrcMap.get(+audio_ssrc) || {}),
+       userId: user_id,
+-      hasVideo: Boolean(video_ssrc), // Maybe ?
++      hasVideo: Boolean(video_ssrc),
+     });
+-    /**
+-{
+-  video_ssrc: 0,
+-  user_id: 'uid',
+-  streams: [
+-    {
+-      ssrc: 27734,
+-      rtx_ssrc: 27735,
+-      rid: '100',
+-      quality: 100,
+-      max_resolution: { width: 0, type: 'source', height: 0 },,
+-      max_framerate: 60,
+-      active: false
++    if (Array.isArray(streams)) {
++      for (const s of streams) {
++        if (s.ssrc) {
++          this.ssrcMap.set(+s.ssrc, {
++            ...(this.ssrcMap.get(+s.ssrc) || {}),
++            userId: user_id,
++            hasVideo: true,
++          });
++        }
++      }
+     }
+-  ],
+-  audio_ssrc: 27733
+-}
+-     */
+   }
+ 
+   /**
+diff --git a/src/client/voice/networking/VoiceWebSocket.js b/src/client/voice/networking/VoiceWebSocket.js
+index 32f1d5b781584600dab243b032a996d39a919802..a9417ae11b1f13128b133bdffdd17ef18159296e 100644
+--- a/src/client/voice/networking/VoiceWebSocket.js
++++ b/src/client/voice/networking/VoiceWebSocket.js
+@@ -198,6 +198,17 @@ class VoiceWebSocket extends EventEmitter {
+           speaking: 0,
+           hasVideo: Boolean(packet.d.video_ssrc),
+         });
++        if (Array.isArray(packet.d.streams)) {
++          for (const s of packet.d.streams) {
++            if (s.ssrc) {
++              this.connection.ssrcMap.set(+s.ssrc, {
++                userId: packet.d.user_id,
++                speaking: 0,
++                hasVideo: true,
++              });
++            }
++          }
++        }
+         break;
+       case VoiceOpcodes.CLIENT_DISCONNECT:
+         const streamInfo = this.connection.receiver && this.connection.receiver.packets.streams.get(packet.d.user_id);
